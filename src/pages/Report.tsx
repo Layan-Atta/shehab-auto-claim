@@ -18,10 +18,21 @@ interface ReportData {
   dateTime: string;
 }
 
+const analysisSteps = [
+  { id: 1, title: "تم كشف الضرر", description: "صدام أمامي - الجانب الأيمن", delay: 500 },
+  { id: 2, title: "السبب المحتمل", description: "حفرة طريق - عمق تقديري 15 سم", delay: 1200 },
+  { id: 3, title: "تقييم الخطورة", description: "متوسط - يتطلب إصلاح فوري", delay: 1900 },
+  { id: 4, title: "تحديد المسؤولية", description: "أمانة منطقة الرياض", delay: 2600 },
+  { id: 5, title: "الموقع", description: "طريق الملك فهد - منطقة صيانة معروفة", delay: 3300 },
+];
+
 const Report = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [visibleAnalysisSteps, setVisibleAnalysisSteps] = useState<number[]>([]);
   
   const carInputRef = useRef<HTMLInputElement>(null);
   const roadInputRef = useRef<HTMLInputElement>(null);
@@ -59,6 +70,24 @@ const Report = () => {
     }
   };
 
+  const startAnalysis = () => {
+    setIsAnalyzing(true);
+    setVisibleAnalysisSteps([]);
+    setAnalysisComplete(false);
+
+    // Show analysis steps one by one
+    analysisSteps.forEach((analysisStep) => {
+      setTimeout(() => {
+        setVisibleAnalysisSteps(prev => [...prev, analysisStep.id]);
+      }, analysisStep.delay);
+    });
+
+    // Complete analysis after all steps
+    setTimeout(() => {
+      setAnalysisComplete(true);
+    }, 4000);
+  };
+
   const handleSubmit = () => {
     // Save to localStorage
     const reports = JSON.parse(localStorage.getItem('shehab_reports') || '[]');
@@ -86,6 +115,80 @@ const Report = () => {
   const goToPreviousStep = () => {
     if (step > 0) setStep(step - 1);
   };
+
+  // AI Analysis View
+  if (isAnalyzing) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8 space-y-6">
+          {/* Progress Bar */}
+          <div className="flex gap-2 justify-center mb-6">
+            {[1, 2, 3].map((i) => (
+              <div 
+                key={i} 
+                className={`h-1.5 w-24 rounded-full ${i <= 3 ? 'bg-primary' : 'bg-muted'}`}
+              />
+            ))}
+          </div>
+
+          <Card className="p-6 space-y-6">
+            {/* Header */}
+            <div className="text-center space-y-3">
+              <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <span className="text-3xl">🤖</span>
+              </div>
+              <h2 className="text-2xl font-bold">تحليل الذكاء الاصطناعي</h2>
+              <p className="text-muted-foreground">
+                {analysisComplete ? "تم اكتمال التحليل" : "جاري تحليل الصور والبيانات"}
+              </p>
+            </div>
+
+            {/* Analysis Steps */}
+            <div className="space-y-4">
+              {analysisSteps.map((analysisStep) => {
+                const isVisible = visibleAnalysisSteps.includes(analysisStep.id);
+                return (
+                  <div
+                    key={analysisStep.id}
+                    className={`p-4 rounded-xl border-2 transition-all duration-500 ${
+                      isVisible
+                        ? 'bg-gradient-to-l from-gold/10 to-gold/5 border-gold/30 opacity-100 translate-x-0'
+                        : 'bg-muted/30 border-muted opacity-40 translate-x-4'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">{analysisStep.description}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-bold ${isVisible ? 'text-gold' : 'text-muted-foreground'}`}>
+                          {isVisible ? '✓' : '○'} {analysisStep.title}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action Button */}
+            <Button
+              onClick={() => {
+                handleSubmit();
+                navigate("/timeline");
+              }}
+              disabled={!analysisComplete}
+              className="w-full bg-gold hover:bg-gold/90 text-primary-foreground text-lg py-6"
+            >
+              {analysisComplete ? "متابعة حالة البلاغ" : "⏳ جاري التحليل..."}
+            </Button>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (
@@ -500,7 +603,7 @@ const Report = () => {
                 السابق
               </Button>
               <Button
-                onClick={handleSubmit}
+                onClick={startAnalysis}
                 className="flex-1 bg-gold hover:bg-gold/90 text-primary-foreground text-lg py-6"
               >
                 📤 إرسال البلاغ
