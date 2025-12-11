@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { CheckCircle2, Clock, FileText } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Zap } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -25,8 +25,8 @@ const Dashboard = () => {
           </div>
         </Card>
 
-        {/* Main Action */}
-        <div className="flex justify-center py-8">
+        {/* Main Actions */}
+        <div className="flex flex-col md:flex-row justify-center items-center gap-4 py-8">
           <Button
             onClick={() => navigate("/report")}
             size="lg"
@@ -34,6 +34,16 @@ const Dashboard = () => {
           >
             <FileText className="ml-3 h-8 w-8" />
             بلاغ حادث فردي جديد
+          </Button>
+          
+          <Button
+            onClick={() => navigate("/damage-detector")}
+            size="lg"
+            variant="outline"
+            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground text-xl px-12 py-8 rounded-2xl shadow-xl transition-transform hover:scale-105"
+          >
+            <Zap className="ml-3 h-8 w-8" />
+            كاشف الأضرار بالذكاء الاصطناعي
           </Button>
         </div>
 
