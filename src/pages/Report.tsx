@@ -1,63 +1,187 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { MapPin, Upload, CheckCircle2, Loader2 } from "lucide-react";
+import { MapPin, Upload, CheckCircle2, ArrowRight, Calendar, FileText, Send, Image, Car, Route } from "lucide-react";
 import { toast } from "sonner";
+
+interface ReportData {
+  carImage: string | null;
+  roadImage: string | null;
+  description: string;
+  location: string;
+  dateTime: string;
+}
 
 const Report = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
-  const [carImage, setCarImage] = useState(false);
-  const [roadImage, setRoadImage] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [step, setStep] = useState(0);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  
+  const carInputRef = useRef<HTMLInputElement>(null);
+  const roadInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageUpload = (type: 'car' | 'road') => {
-    if (type === 'car') {
-      setCarImage(true);
-      toast.success("تم رفع صورة المركبة بنجاح");
-    } else {
-      setRoadImage(true);
-      toast.success("تم رفع صورة الطريق بنجاح");
-      
-      // Trigger AI analysis
-      setTimeout(() => {
-        setIsAnalyzing(true);
-        setTimeout(() => {
-          setIsAnalyzing(false);
-          setShowAnalysis(true);
-        }, 2500);
-      }, 500);
+  const [reportData, setReportData] = useState<ReportData>({
+    carImage: null,
+    roadImage: null,
+    description: "",
+    location: "",
+    dateTime: new Date().toISOString().slice(0, 16),
+  });
+
+  const steps = [
+    { title: "تحديد الموقع", icon: MapPin },
+    { title: "رفع الأدلة", icon: Upload },
+    { title: "تفاصيل الحادث", icon: FileText },
+    { title: "المراجعة والإرسال", icon: Send },
+  ];
+
+  const handleImageUpload = (type: 'car' | 'road', event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        if (type === 'car') {
+          setReportData(prev => ({ ...prev, carImage: result }));
+          toast.success("تم رفع صورة المركبة بنجاح");
+        } else {
+          setReportData(prev => ({ ...prev, roadImage: result }));
+          toast.success("تم رفع صورة الطريق بنجاح");
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const handleSubmit = () => {
-    toast.success("تم رفع البلاغ بنجاح");
-    setTimeout(() => navigate("/results"), 1000);
+    // Save to localStorage
+    const reports = JSON.parse(localStorage.getItem('shehab_reports') || '[]');
+    const newReport = {
+      id: Date.now(),
+      ...reportData,
+      status: 'processing',
+      submittedAt: new Date().toISOString(),
+    };
+    reports.push(newReport);
+    localStorage.setItem('shehab_reports', JSON.stringify(reports));
+    
+    setIsSubmitted(true);
+    toast.success("✅ تم إرسال البلاغ بنجاح!");
   };
+
+  const canProceedStep1 = true; // Location step always can proceed
+  const canProceedStep2 = reportData.carImage || reportData.roadImage;
+  const canProceedStep3 = reportData.description.trim() !== "" && reportData.location.trim() !== "";
+
+  const goToNextStep = () => {
+    if (step < 3) setStep(step + 1);
+  };
+
+  const goToPreviousStep = () => {
+    if (step > 0) setStep(step - 1);
+  };
+
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8 flex items-center justify-center">
+          <Card className="p-8 text-center space-y-6 max-w-md w-full animate-fade-in">
+            <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle2 className="h-12 w-12 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold text-primary">✅ تم إرسال البلاغ بنجاح!</h2>
+            <p className="text-muted-foreground">
+              سيتم مراجعة بلاغك وتحليله بواسطة الذكاء الاصطناعي. يمكنك متابعة حالة البلاغ من صفحة المتابعة.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={() => navigate("/timeline")}
+                className="w-full bg-primary hover:bg-primary/90"
+              >
+                متابعة حالة البلاغ
+              </Button>
+              <Button
+                onClick={() => navigate("/")}
+                variant="outline"
+                className="w-full"
+              >
+                العودة للرئيسية
+              </Button>
+            </div>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8 space-y-6">
-        {/* Progress Indicator */}
-        <div className="flex justify-center gap-4 mb-8">
-          {[1, 2, 3].map((s) => (
-            <div
-              key={s}
-              className={`h-2 w-20 rounded-full transition-all ${
-                s <= step ? 'bg-primary' : 'bg-border'
-              }`}
-            />
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/")}
+          className="mb-4 hover:bg-muted"
+        >
+          <ArrowRight className="h-4 w-4 ml-2" />
+          رجوع للرئيسية
+        </Button>
+
+        {/* Page Title */}
+        <div className="text-center space-y-2 mb-8">
+          <h1 className="text-3xl font-bold text-primary">تقديم بلاغ حادث فردي</h1>
+          <p className="text-muted-foreground">قم بإكمال الخطوات التالية لتقديم بلاغك</p>
+        </div>
+
+        {/* Progress Stepper */}
+        <div className="flex justify-between items-center mb-8 px-4">
+          {steps.map((s, index) => (
+            <div key={index} className="flex flex-col items-center flex-1">
+              <div className="flex items-center w-full">
+                <div
+                  className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${
+                    index < step
+                      ? 'bg-primary text-primary-foreground'
+                      : index === step
+                      ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {index < step ? (
+                    <CheckCircle2 className="h-5 w-5" />
+                  ) : (
+                    <s.icon className="h-5 w-5" />
+                  )}
+                </div>
+                {index < steps.length - 1 && (
+                  <div
+                    className={`flex-1 h-1 mx-2 rounded-full transition-all ${
+                      index < step ? 'bg-primary' : 'bg-muted'
+                    }`}
+                  />
+                )}
+              </div>
+              <span className={`text-xs mt-2 text-center ${
+                index <= step ? 'text-primary font-medium' : 'text-muted-foreground'
+              }`}>
+                {s.title}
+              </span>
+            </div>
           ))}
         </div>
 
-        {/* Step 1: Location */}
-        {step === 1 && (
+        {/* Step 0: Location */}
+        {step === 0 && (
           <Card className="p-6 space-y-6 animate-fade-in">
             <div className="text-center space-y-2">
               <MapPin className="h-12 w-12 text-primary mx-auto" />
@@ -75,7 +199,7 @@ const Report = () => {
             </div>
 
             <Button
-              onClick={() => setStep(2)}
+              onClick={goToNextStep}
               className="w-full bg-primary hover:bg-primary/90 text-lg py-6"
             >
               تأكيد الموقع والمتابعة
@@ -83,125 +207,305 @@ const Report = () => {
           </Card>
         )}
 
-        {/* Step 2: Evidence Upload */}
-        {step === 2 && (
+        {/* Step 1: Evidence Upload */}
+        {step === 1 && (
           <Card className="p-6 space-y-6 animate-fade-in">
             <div className="text-center space-y-2">
               <Upload className="h-12 w-12 text-primary mx-auto" />
               <h2 className="text-2xl font-bold">رفع الأدلة</h2>
-              <p className="text-muted-foreground">قم برفع صور الحادث للتحليل</p>
+              <p className="text-muted-foreground">قم برفع صور الحادث (صورة واحدة على الأقل)</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Car Image Upload */}
-              <div
-                onClick={() => !carImage && handleImageUpload('car')}
-                className={`aspect-video border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
-                  carImage
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary hover:bg-muted'
-                }`}
-              >
-                {carImage ? (
-                  <>
-                    <CheckCircle2 className="h-12 w-12 text-primary" />
-                    <p className="font-semibold">صورة المركبة</p>
-                    <p className="text-sm text-muted-foreground">تم الرفع بنجاح</p>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-12 w-12 text-muted-foreground" />
-                    <p className="font-semibold">صورة المركبة</p>
-                    <p className="text-sm text-muted-foreground">اضغط للرفع</p>
-                  </>
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2 text-lg font-semibold">
+                  <Car className="h-5 w-5" />
+                  🚗 صورة المركبة
+                </Label>
+                <input
+                  ref={carInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => handleImageUpload('car', e)}
+                />
+                <div
+                  onClick={() => carInputRef.current?.click()}
+                  className={`aspect-video border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-3 transition-all cursor-pointer overflow-hidden ${
+                    reportData.carImage
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary hover:bg-muted'
+                  }`}
+                >
+                  {reportData.carImage ? (
+                    <img 
+                      src={reportData.carImage} 
+                      alt="صورة المركبة" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <>
+                      <Image className="h-12 w-12 text-muted-foreground" />
+                      <p className="font-semibold">اضغط للرفع</p>
+                      <p className="text-sm text-muted-foreground">أو التقط صورة</p>
+                    </>
+                  )}
+                </div>
+                {reportData.carImage && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setReportData(prev => ({ ...prev, carImage: null }))}
+                    className="w-full"
+                  >
+                    إزالة الصورة
+                  </Button>
                 )}
               </div>
 
               {/* Road Image Upload */}
-              <div
-                onClick={() => !roadImage && handleImageUpload('road')}
-                className={`aspect-video border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
-                  roadImage
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary hover:bg-muted'
-                }`}
-              >
-                {roadImage ? (
-                  <>
-                    <CheckCircle2 className="h-12 w-12 text-primary" />
-                    <p className="font-semibold">صورة الطريق/الحفرة</p>
-                    <p className="text-sm text-muted-foreground">تم الرفع بنجاح</p>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-12 w-12 text-muted-foreground" />
-                    <p className="font-semibold">صورة الطريق/الحفرة</p>
-                    <p className="text-sm text-muted-foreground">اضغط للرفع</p>
-                  </>
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2 text-lg font-semibold">
+                  <Route className="h-5 w-5" />
+                  🛣️ صورة الطريق/الحفرة
+                </Label>
+                <input
+                  ref={roadInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => handleImageUpload('road', e)}
+                />
+                <div
+                  onClick={() => roadInputRef.current?.click()}
+                  className={`aspect-video border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-3 transition-all cursor-pointer overflow-hidden ${
+                    reportData.roadImage
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary hover:bg-muted'
+                  }`}
+                >
+                  {reportData.roadImage ? (
+                    <img 
+                      src={reportData.roadImage} 
+                      alt="صورة الطريق" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <>
+                      <Image className="h-12 w-12 text-muted-foreground" />
+                      <p className="font-semibold">اضغط للرفع</p>
+                      <p className="text-sm text-muted-foreground">أو التقط صورة</p>
+                    </>
+                  )}
+                </div>
+                {reportData.roadImage && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setReportData(prev => ({ ...prev, roadImage: null }))}
+                    className="w-full"
+                  >
+                    إزالة الصورة
+                  </Button>
                 )}
               </div>
             </div>
 
-            <Button
-              onClick={() => setStep(3)}
-              disabled={!carImage || !roadImage}
-              className="w-full bg-primary hover:bg-primary/90 text-lg py-6"
-            >
-              المتابعة للتحليل
-            </Button>
+            {!canProceedStep2 && (
+              <p className="text-center text-amber-600 text-sm">
+                ⚠️ يجب رفع صورة واحدة على الأقل للمتابعة
+              </p>
+            )}
+
+            <div className="flex gap-4">
+              <Button
+                variant="outline"
+                onClick={goToPreviousStep}
+                className="flex-1"
+              >
+                السابق
+              </Button>
+              <Button
+                onClick={goToNextStep}
+                disabled={!canProceedStep2}
+                className="flex-1 bg-primary hover:bg-primary/90"
+              >
+                التالي
+              </Button>
+            </div>
           </Card>
         )}
 
-        {/* Step 3: AI Analysis */}
+        {/* Step 2: Accident Details */}
+        {step === 2 && (
+          <Card className="p-6 space-y-6 animate-fade-in">
+            <div className="text-center space-y-2">
+              <FileText className="h-12 w-12 text-primary mx-auto" />
+              <h2 className="text-2xl font-bold">تفاصيل الحادث</h2>
+              <p className="text-muted-foreground">أدخل تفاصيل الحادث</p>
+            </div>
+
+            <div className="space-y-6">
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-lg font-semibold">
+                  📝 وصف الحادث
+                </Label>
+                <Textarea
+                  id="description"
+                  placeholder="اكتب وصفاً تفصيلياً للحادث..."
+                  value={reportData.description}
+                  onChange={(e) => setReportData(prev => ({ ...prev, description: e.target.value }))}
+                  className="min-h-[120px] text-right"
+                  dir="rtl"
+                />
+              </div>
+
+              {/* Location */}
+              <div className="space-y-2">
+                <Label htmlFor="location" className="text-lg font-semibold">
+                  📍 الموقع
+                </Label>
+                <div className="relative">
+                  <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="location"
+                    placeholder="أدخل عنوان الموقع..."
+                    value={reportData.location}
+                    onChange={(e) => setReportData(prev => ({ ...prev, location: e.target.value }))}
+                    className="pr-10 text-right"
+                    dir="rtl"
+                  />
+                </div>
+              </div>
+
+              {/* Date & Time */}
+              <div className="space-y-2">
+                <Label htmlFor="datetime" className="text-lg font-semibold">
+                  📅 التاريخ والوقت
+                </Label>
+                <div className="relative">
+                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="datetime"
+                    type="datetime-local"
+                    value={reportData.dateTime}
+                    onChange={(e) => setReportData(prev => ({ ...prev, dateTime: e.target.value }))}
+                    className="pr-10"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {!canProceedStep3 && (
+              <p className="text-center text-amber-600 text-sm">
+                ⚠️ يجب ملء وصف الحادث والموقع للمتابعة
+              </p>
+            )}
+
+            <div className="flex gap-4">
+              <Button
+                variant="outline"
+                onClick={goToPreviousStep}
+                className="flex-1"
+              >
+                السابق
+              </Button>
+              <Button
+                onClick={goToNextStep}
+                disabled={!canProceedStep3}
+                className="flex-1 bg-primary hover:bg-primary/90"
+              >
+                التالي
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Step 3: Review & Submit */}
         {step === 3 && (
           <Card className="p-6 space-y-6 animate-fade-in">
             <div className="text-center space-y-2">
-              <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <span className="text-2xl">🤖</span>
-              </div>
-              <h2 className="text-2xl font-bold">تحليل الذكاء الاصطناعي</h2>
-              <p className="text-muted-foreground">جاري تحليل الصور والبيانات</p>
+              <Send className="h-12 w-12 text-primary mx-auto" />
+              <h2 className="text-2xl font-bold">المراجعة والإرسال</h2>
+              <p className="text-muted-foreground">راجع بيانات البلاغ قبل الإرسال</p>
             </div>
 
-            {isAnalyzing && (
-              <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                <Loader2 className="h-16 w-16 text-primary animate-spin" />
-                <p className="text-lg font-medium">جاري المسح والتحليل...</p>
+            {/* Summary */}
+            <div className="space-y-4">
+              {/* Images Summary */}
+              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <h3 className="font-semibold text-primary flex items-center gap-2">
+                  <Image className="h-5 w-5" />
+                  الصور المرفقة
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {reportData.carImage && (
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">صورة المركبة</p>
+                      <img 
+                        src={reportData.carImage} 
+                        alt="صورة المركبة" 
+                        className="w-full h-24 object-cover rounded-lg"
+                      />
+                    </div>
+                  )}
+                  {reportData.roadImage && (
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">صورة الطريق</p>
+                      <img 
+                        src={reportData.roadImage} 
+                        alt="صورة الطريق" 
+                        className="w-full h-24 object-cover rounded-lg"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
 
-            {showAnalysis && !isAnalyzing && (
-              <div className="space-y-4 animate-fade-in">
-                <div className="p-4 bg-primary/5 border-r-4 border-primary rounded-lg animate-scan">
-                  <p className="font-semibold text-primary mb-1">✓ تم كشف الضرر</p>
-                  <p className="text-sm">صدام أمامي - الجانب الأيمن</p>
-                </div>
-
-                <div className="p-4 bg-secondary/10 border-r-4 border-secondary rounded-lg animate-scan" style={{ animationDelay: '0.3s' }}>
-                  <p className="font-semibold text-secondary mb-1">✓ السبب المحتمل</p>
-                  <p className="text-sm">حفرة طريق - عمق تقديري 15 سم</p>
-                </div>
-
-                <div className="p-4 bg-primary/5 border-r-4 border-primary rounded-lg animate-scan" style={{ animationDelay: '0.6s' }}>
-                  <p className="font-semibold text-primary mb-1">✓ تقييم الخطورة</p>
-                  <p className="text-sm">متوسط - يتطلب إصلاح فوري</p>
-                </div>
-
-                <div className="p-4 bg-secondary/10 border-r-4 border-secondary rounded-lg animate-scan" style={{ animationDelay: '0.9s' }}>
-                  <p className="font-semibold text-secondary mb-1">✓ الموقع</p>
-                  <p className="text-sm">طريق الملك فهد - منطقة صيانة معروفة</p>
+              {/* Details Summary */}
+              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <h3 className="font-semibold text-primary flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  تفاصيل الحادث
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">وصف الحادث:</span>
+                    <span className="font-medium max-w-[60%] text-left">{reportData.description}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">الموقع:</span>
+                    <span className="font-medium">{reportData.location}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">التاريخ والوقت:</span>
+                    <span className="font-medium" dir="ltr">
+                      {new Date(reportData.dateTime).toLocaleString('ar-SA')}
+                    </span>
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
 
-            {showAnalysis && (
+            <div className="flex gap-4">
+              <Button
+                variant="outline"
+                onClick={goToPreviousStep}
+                className="flex-1"
+              >
+                السابق
+              </Button>
               <Button
                 onClick={handleSubmit}
-                className="w-full bg-gold hover:bg-gold/90 text-gold-foreground text-lg py-6"
+                className="flex-1 bg-gold hover:bg-gold/90 text-primary-foreground text-lg py-6"
               >
-                إرسال البلاغ
+                📤 إرسال البلاغ
               </Button>
-            )}
+            </div>
           </Card>
         )}
       </main>
