@@ -3,6 +3,7 @@
 **"Velocity is the currency of Hackathons."**
 
 We initially architected the application using **Dart (Flutter)** to ensure cross-platform robustness. However, midway through the hackathon, we made a strategic decision to pivot our frontend implementation to **Lovable (AI-Generated UI)**.
+Original Dart source code allows for future native mobile scaling, available in the repository
 
 ### 🔄 Why the Pivot?
 1.  **Instant Accessibility:** We wanted judges and users to test the model *immediately* via a web link, removing the friction of installing APKs or setting up emulators required by the Dart build.
