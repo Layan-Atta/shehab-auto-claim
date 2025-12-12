@@ -1,4 +1,27 @@
-# Welcome to your Lovable project
+## ⚡ Agile Prototyping Strategy: The AI-First Approach
+
+**"Velocity is the currency of Hackathons."**
+
+We initially architected the application using **Dart (Flutter)** to ensure cross-platform robustness. However, midway through the hackathon, we made a strategic decision to pivot our frontend implementation to **Lovable (AI-Generated UI)**.
+
+### 🔄 Why the Pivot?
+1.  **Instant Accessibility:** We wanted judges and users to test the model *immediately* via a web link, removing the friction of installing APKs or setting up emulators required by the Dart build.
+2.  **Focus on Logic over Boilerplate:** By using Lovable to generate the UI shell, we redirected 100% of our engineering efforts into refining the **TensorFlow.js model integration** and ensuring smooth inference loops.
+3.  **The "AI-Native" Philosophy:** We believe that in 2024, AI isn't just a feature we add to apps; it's the **ultimate prototyping tool**.
+    * *Model:* Built with Teachable Machine.
+    * *UI:* Accelerated by Lovable.
+    * *Result:* A fully functional, deployable MVP in record time.
+
+> **💡 Insight:** This project demonstrates that modern software engineering is about *orchestrating* powerful AI tools to solve problems efficiently, rather than writing every line of CSS from scratch.
+
+
+
+
+
+
+
+---
+
 
 ## Project info
 
